@@ -1,0 +1,32 @@
+#Rabbit MK configuration
+spring:
+  rabbitmq:
+    host: rabbitmq-cluster.virtual.gad.com
+    username: gad
+    relay:
+      port: 61613
+    password: r@pw
+  cloud:
+    config:
+      allowOverride: true
+      overrideNone: true
+    stream:
+      bindings:
+        pocGADConsumer:
+          binder: rabbit
+          destination: gad-produce-consume-poc
+          contentType: application/x-java-object;type=com.gad.second.PocInfo
+          consumer:
+            concurrency: 100
+server:
+  port: 8098
+security:
+  user:
+    password: test
+    name: gad
+logging:
+  config: classpath:logback-spring-default.xml
+  level:
+    org:
+      springframework:
+        integration: DEBUG

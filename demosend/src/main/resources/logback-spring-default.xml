@@ -1,0 +1,65 @@
+<configuration>
+    <jmxConfigurator />
+
+    <!-- Use spring properties as Logback doesn't know how to read YAML configuration files -->
+    <springProperty scope="context" name="infoBuildArtifact" source="info.build.artifact"/>
+    <springProperty scope="context" name="infoBuildVersion" source="info.build.version"/>
+    <springProperty scope="context" name="infoBuildShortName" source="info.build.short.name"/>
+    <springProperty scope="context" name="loggingLogstashServerAddress" source="logging.logstash.server.address"/>
+    <springProperty scope="context" name="loggingLogstashServerPort" source="logging.logstash.server.port"/>
+
+
+    <appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>### %d{HH:mm:ss.SSS} [${infoBuildShortName},%X{X-B3-TraceId:-},%X{X-B3-SpanId:-}] [%thread] [%X{user:-&lt;anon&gt;}] %-5level %logger{36} - %msg %n</Pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>TRACE</level>
+        </filter>
+    </appender>
+
+    <appender name="dailyRollingFileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/${infoBuildArtifact}-${infoBuildVersion}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <FileNamePattern>logs/${infoBuildArtifact}-${infoBuildVersion}.%d{yyyy-MM-dd}.log.zip</FileNamePattern>
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>### %d{HH:mm:ss.SSS} [${infoBuildShortName},%X{X-B3-TraceId:-},%X{X-B3-SpanId:-}] [%thread] [%X{user:-&lt;anon&gt;}] %-5level %logger{36} - %msg %n</Pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>TRACE</level>
+        </filter>
+    </appender>
+
+    <appender name="logstashAppender" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <!-- logstash server to connect to -->
+        <remoteHost>${loggingLogstashServerAddress}</remoteHost>
+        <port>${loggingLogstashServerPort}</port>
+
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <provider class="net.logstash.logback.composite.loggingevent.LoggingEventPatternJsonProvider">
+                <pattern>
+                    {
+                    "user": "%X{user:-&lt;anon&gt;}",
+                    "module" : "${infoBuildShortName}"
+                    }
+                </pattern>
+            </provider>
+        </encoder>
+    </appender>
+
+    <logger name="com.gad" additivity="false">
+        <level value="INFO" />
+        <appender-ref ref="dailyRollingFileAppender"/>
+        <appender-ref ref="consoleAppender" />
+    </logger>
+
+    <root>
+        <level value="INFO" />
+        <appender-ref ref="dailyRollingFileAppender" />
+        <appender-ref ref="consoleAppender" />
+    </root>
+</configuration>
